@@ -1,3 +1,4 @@
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 
@@ -6,6 +7,8 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class PhoneBook {
     static class Contact implements Comparable<Contact>{
@@ -98,6 +101,10 @@ public class PhoneBook {
         list = new ArrayList<>();
     }
 
+    public PhoneBook(Stream<Contact> s){
+        list = s.collect(Collectors.toList());
+    }
+
     public List<Contact> getList() {
         return list;
     }
@@ -112,7 +119,7 @@ public class PhoneBook {
 
     public Contact getContact(int i){
         if(i >= list.size() || i < 0){
-            throw new RuntimeException("Такого контакта нет");
+            throw new RuntimeException("Нет такого контакта");
         }
         return list.get(i);
     }
@@ -128,20 +135,20 @@ public class PhoneBook {
     }
 
     public void sortByName(){
-        List<Contact> mas = new ArrayList<>(list);
-        mas.sort(Comparator.comparing(c -> c.name));
-        mas.forEach(c -> System.out.println(c.toString()));
+        list.stream()
+                .sorted(Comparator.comparing(c -> c.name))
+                .forEach(System.out::println);
     }
 
     public void sortByAge(){
-        List<Contact> mas = new ArrayList<>(list);
-        mas.sort(Comparator.comparing(c -> c.dateOfBirth));
-        mas.forEach(c -> System.out.println(c.toString()));
+        list.stream()
+                .sorted(Comparator.comparing(c -> c.name))
+                .forEach(System.out::println);
     }
 
     public void changeContact(int index, Contact contact){
         if(index >= list.size() || index < 0){
-            throw new RuntimeException("Такого контакта нет");
+            throw new RuntimeException("Нет такого контакта");
         }
         Contact cc = list.get(index);
         boolean change = false;
@@ -167,6 +174,9 @@ public class PhoneBook {
     }
 
     private static void initMapper(){
+        if(mapper != null){
+            return;
+        }
         mapper = new ObjectMapper();
         SimpleModule mod = new SimpleModule();
         mod.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer());
@@ -177,9 +187,7 @@ public class PhoneBook {
     }
 
     public static void toJson(String file, Object ob){
-        if(mapper == null){
-            initMapper();
-        }
+        initMapper();
         try {
             mapper.writeValue(new File(file), ob);
         } catch (IOException e) {
@@ -188,9 +196,7 @@ public class PhoneBook {
     }
 
     public static PhoneBook fromJson(String file){
-        if(mapper == null){
-            initMapper();
-        }
+        initMapper();
         try {
             return mapper.readValue(new File(file), PhoneBook.class);
         } catch (IOException e) {
@@ -200,19 +206,17 @@ public class PhoneBook {
     }
 
     public static void main(String[] args) {
-        PhoneBook pb = new PhoneBook();
-        pb.addContact(new Contact("Денис", LocalDate.of(1993, 2, 3), new TreeSet<>(Arrays.asList("380939328243")), "myAddres", LocalDateTime.now()));
-        pb.addContact(new Contact("Аня", LocalDate.of(2001, 1, 12), new TreeSet<>(Arrays.asList("123456")), "NotmyAddres", LocalDateTime.now()));
-        pb.addContact(new Contact("Андрей", LocalDate.of(1989, 11, 22), new TreeSet<>(Arrays.asList("7654321")), "anohermyAddres", LocalDateTime.now()));
+        PhoneBook pb = new PhoneBook(Stream.of(
+                new Contact("Денис", LocalDate.of(1993, 2, 3), new TreeSet<>(Arrays.asList("380939328243")), "myAddres", LocalDateTime.now()),
+                new Contact("Аня", LocalDate.of(2001, 1, 12), new TreeSet<>(Arrays.asList("123456")), "NotmyAddres", LocalDateTime.now()),
+                new Contact("Андрей", LocalDate.of(1989, 11, 22), new TreeSet<>(Arrays.asList("7654321")), "anohermyAddres", LocalDateTime.now())
+        ));
         pb.sortByName();
-        System.out.println("-------------------------------------------------------------------------------------");
+        System.out.println("*******************************************************************************************************************************");
+        pb.changeContact(2, new Contact("Дима", LocalDate.of(2001,1,24),new TreeSet<>(Arrays.asList("3801234567")), "mymyAdres", LocalDateTime.now()));
         PhoneBook.toJson("files/PB12.json", pb);
 
-        PhoneBook pb2 = PhoneBook.fromJson("files/PB12.json");
-        assert pb2 != null;
-        pb2.sortByAge();
-        pb2.changeContact(0, new Contact("Дима", LocalDate.of(2001,1,24),new TreeSet<>(Arrays.asList("3801234567")), "mymyAdres", LocalDateTime.now()));
-        System.out.println("-------------------------------------------------------------------------------------");
-        pb2.sortByName();
+        Objects.requireNonNull(PhoneBook.fromJson("files/PB12.json")).getList()
+                .forEach(System.out::println);
     }
 }
